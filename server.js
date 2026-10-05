@@ -21,6 +21,15 @@ const rooms = new Map();
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   if (url === '/health') { res.writeHead(200, { 'content-type': 'text/plain' }); res.end('ok'); return; }
+  const STATIC = { '/manifest.webmanifest': 'application/manifest+json', '/sw.js': 'application/javascript', '/icon-192.png': 'image/png', '/icon-512.png': 'image/png' };
+  if (STATIC[url]) {
+    fs.readFile(path.join(__dirname, 'public', url), (err, buf) => {
+      if (err) { res.writeHead(404); res.end('not found'); return; }
+      res.writeHead(200, { 'content-type': STATIC[url], 'cache-control': url === '/sw.js' ? 'no-cache' : 'public, max-age=86400' });
+      res.end(buf);
+    });
+    return;
+  }
   if (url === '/' || url === '/index.html') {
     fs.readFile(PAGE, (err, buf) => {
       if (err) { res.writeHead(500); res.end('page missing'); return; }
