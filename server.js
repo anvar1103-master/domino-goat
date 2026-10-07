@@ -11,7 +11,8 @@ const D = require('./engine.js');
 const PORT = process.env.PORT || 3000;
 const PAGE = path.join(__dirname, 'public', 'index.html');
 const NAMES_BOT = ['Бот Запад', 'Бот Север', 'Бот Восток', 'Бот Юг'];
-const BOT_DELAY = 1100; // ms between a bot's turn and its move (clients animate meanwhile)
+const SPD = process.env.KOZEL_FAST ? 0.01 : 1; // tests only: run the clock fast
+const BOT_DELAY = 1100 * SPD; // ms between a bot's turn and its move (clients animate meanwhile)
 const NEXT_TIMEOUT = 45000; // start the next round even if someone does not press "Дальше"
 const ROOM_TTL = 30 * 60 * 1000; // empty rooms are removed after 30 minutes
 
@@ -52,6 +53,8 @@ function makeRoom() {
   const room = {
     code: newCode(), host: null, level: 2,
     seats: [null, null, null, null], // {pid, name, ws} for humans; null = bot
+    mode: 'normal', // 'normal' = one game, 'circle' = round-robin of 6 games
+    circle: null, seatPlayer: [0, 1, 2, 3], // circle: totals per player, and which player sits in which seat
     phase: 'lobby', m: null, st: null, log: [], round: 0, carry: 0,
     ready: new Set(), timer: null, last: Date.now(), roundEnd: null,
   };
@@ -60,7 +63,66 @@ function makeRoom() {
 }
 const seatOf = (room, pid) => room.seats.findIndex((s) => s && s.pid === pid);
 const isBot = (room, s) => !room.seats[s] || !room.seats[s].ws; // empty or disconnected seats play as bots
-const nameOf = (room, s) => (room.seats[s] ? room.seats[s].name : NAMES_BOT[(s + 3) % 4]);
+const nameOf = (room, s) => {
+  if (room.seats[s]) return room.seats[s].name;
+  // in a circle a bot keeps the name of the player it stands in for
+  return room.circle ? room.circle.players[room.seatPlayer[s]].name : NAMES_BOT[(s + 3) % 4];
+};
+
+/* ---------- circle: 6 games, every pairing twice, points per player ---------- */
+function initCircle(room) {
+  const players = [0, 1, 2, 3].map((s) => {
+    const p = room.seats[s];
+    return { name: p ? p.name : NAMES_BOT[(s + 3) % 4], pid: p ? p.pid : null };
+  });
+  room.circle = { players, totals: [0, 0, 0, 0], game: 0, history: [], done: false, recorded: -1 };
+  room.seatPlayer = [0, 1, 2, 3];
+}
+// put everyone in the seats the current game calls for
+function seatCircleGame(room) {
+  const c = room.circle, by = [];
+  for (let s = 0; s < 4; s++) by[room.seatPlayer[s]] = room.seats[s];
+  const arr = D.circleSeating(c.game);
+  for (let s = 0; s < 4; s++) { room.seats[s] = by[arr[s]]; room.seatPlayer[s] = arr[s]; }
+}
+// a human who sits down (or comes back) speaks for the player of that seat
+function syncCirclePlayer(room, s) {
+  const p = room.seats[s];
+  if (room.circle && p) room.circle.players[room.seatPlayer[s]] = { name: p.name, pid: p.pid };
+}
+function circleTeams(room, game) {
+  const c = room.circle, arr = D.circleSeating(game);
+  return [[c.players[arr[0]].name, c.players[arr[2]].name], [c.players[arr[1]].name, c.players[arr[3]].name]];
+}
+function circleView(room) {
+  const c = room.circle;
+  if (!c) return null;
+  const last = c.game >= D.CIRCLE_GAMES - 1;
+  return {
+    game: c.game + 1, games: D.CIRCLE_GAMES, done: c.done,
+    players: c.players.map((p, i) => ({ name: p.name, pts: c.totals[i] })),
+    teams: [[nameOf(room, 0), nameOf(room, 2)], [nameOf(room, 1), nameOf(room, 3)]],
+    next: c.done || last ? null : circleTeams(room, c.game + 1),
+    history: c.history,
+  };
+}
+// the game just ended: +1 to each winner and -1 to each loser (+2 / -2 when won dry)
+function recordCircleGame(room) {
+  const c = room.circle;
+  if (c.recorded === c.game) return;
+  c.recorded = c.game;
+  const res = D.matchResult(room.m.score);
+  const teams = [[0, 2], [1, 3]].map((ss) => ss.map((s) => room.seatPlayer[s]));
+  const deltas = [0, 0, 0, 0]; // per player (index in circle.players): what this game changed
+  teams[res.winTeam].forEach((p) => { deltas[p] = res.delta; });
+  teams[res.loseTeam].forEach((p) => { deltas[p] = -res.delta; });
+  deltas.forEach((d, p) => { c.totals[p] += d; });
+  c.history.push({
+    game: c.game + 1, teams: [[0, 2], [1, 3]].map((ss) => ss.map((s) => nameOf(room, s))),
+    score: room.m.score.slice(), winTeam: res.winTeam, dry: res.dry, delta: res.delta, deltas,
+  });
+  if (c.game >= D.CIRCLE_GAMES - 1) c.done = true;
+}
 
 function send(ws, msg) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg)); }
 function eachHuman(room, fn) { room.seats.forEach((p, s) => { if (p && p.ws) fn(p, s); }); }
@@ -68,7 +130,7 @@ function eachHuman(room, fn) { room.seats.forEach((p, s) => { if (p && p.ws) fn(
 function lobbyMsg(room) {
   return {
     t: 'lobby', code: room.code, phase: room.phase, level: room.level,
-    host: room.host,
+    host: room.host, mode: room.mode, circle: circleView(room),
     seats: room.seats.map((p, s) => ({ name: nameOf(room, s), human: !!p, online: !!(p && p.ws), pid: p ? p.pid : null })),
   };
 }
@@ -87,7 +149,7 @@ function viewFor(room, seat) {
     turn: st.turn, starter: st.starter, mustOpenWith11: st.mustOpenWith11, passes: st.passes,
     over: st.over,
     score: room.m.score, pend: room.m.pend, rounds: room.m.rounds, open: room.m.open,
-    carry: room.carry, level: room.level,
+    carry: room.carry, level: room.level, redeals: st.redeals || 0, circle: circleView(room), circleMe: room.circle ? room.seatPlayer[seat] : -1,
     roundEnd: room.phase === 'roundEnd' || room.phase === 'gameOver' ? room.roundEnd : null,
   };
 }
@@ -111,7 +173,7 @@ function beginRound(room, starter) {
   room.roundEnd = null;
   sendState(room, true);
   // clients play the shuffle animation first
-  room.timer = setTimeout(() => step(room), 2400);
+  room.timer = setTimeout(() => step(room), 2400 * SPD);
 }
 function step(room) {
   clearTimeout(room.timer);
@@ -124,7 +186,7 @@ function step(room) {
     room.timer = setTimeout(() => {
       const mv = D.botChoose(st, seat, room.level, room.log);
       if (mv) play(room, seat, mv); else doPass(room, seat);
-    }, BOT_DELAY + Math.random() * 400);
+    }, BOT_DELAY + Math.random() * 400 * SPD);
     return;
   }
   if (!moves.length) {
@@ -138,22 +200,24 @@ function play(room, seat, mv) {
   const r = D.applyMove(st, mv);
   eachHuman(room, (p) => send(p.ws, { t: 'played', seat, bone: r.bone, side: r.side }));
   room.last = Date.now();
-  room.timer = setTimeout(() => step(room), st.over ? 900 : 650);
+  room.timer = setTimeout(() => step(room), (st.over ? 900 : 650) * SPD);
 }
 function doPass(room, seat) {
   const st = room.st;
   room.log.push({ pass: true, seat, ends: st.ends.slice() });
   D.pass(st);
   eachHuman(room, (p) => send(p.ws, { t: 'pass', seat }));
-  room.timer = setTimeout(() => step(room), 700);
+  room.timer = setTimeout(() => step(room), 700 * SPD);
 }
 function finishRound(room) {
   const st = room.st, r = st.result;
   let loseTeam = null, pts = 0, carried = 0;
   if (r.kind === 'out' || !r.draw) { loseTeam = r.loseTeam; carried = room.carry; pts = r.points + carried; room.carry = 0; }
   else room.carry += r.total;
-  const info = D.scoreRound(room.m, loseTeam, pts);
+  // the first points are written only after 13+ in one round (a fish counts the loser's own hands)
+  const info = D.scoreRound(room.m, loseTeam, pts, D.roundQual(r, loseTeam, carried));
   const gameEnd = room.m.score[0] >= 101 || room.m.score[1] >= 101;
+  if (gameEnd && room.circle) recordCircleGame(room);
   // next starter: winner after going out; after a fish whoever made it; 1:1 again while nobody has points
   let next;
   if (room.m.score[0] === 0 && room.m.score[1] === 0) next = null;
@@ -163,8 +227,9 @@ function finishRound(room) {
   room.roundEnd = { result: r, hands: st.hands, loseTeam, pts, carried, info, carry: room.carry, gameEnd };
   room.phase = gameEnd ? 'gameOver' : 'roundEnd';
   room.ready.clear();
-  eachHuman(room, (p) => send(p.ws, Object.assign({ t: 'roundEnd' }, room.roundEnd, {
+  eachHuman(room, (p, seat) => send(p.ws, Object.assign({ t: 'roundEnd' }, room.roundEnd, {
     score: room.m.score, pend: room.m.pend, rounds: room.m.rounds, open: room.m.open,
+    circle: circleView(room), circleMe: room.circle ? room.seatPlayer[seat] : -1,
   })));
   if (!gameEnd) room.timer = setTimeout(() => beginRound(room, room.next), NEXT_TIMEOUT);
 }
@@ -199,6 +264,7 @@ function onMessage(ws, msg) {
       const old = room.seats[s].ws;
       if (old && old !== ws) { old.room = null; try { old.close(); } catch (e) {} }
       room.seats[s].ws = ws; room.seats[s].name = name;
+      syncCirclePlayer(room, s);
     } else {
       if (room.phase !== 'lobby') {
         // mid-game newcomers may take a seat that a bot is playing
@@ -209,6 +275,7 @@ function onMessage(ws, msg) {
         if (s < 0) return send(ws, { t: 'error', text: 'Все четыре места заняты.' });
       }
       room.seats[s] = { pid, name, ws };
+      syncCirclePlayer(room, s);
     }
     ws.room = room; ws.pid = pid;
     if (!room.host || seatOf(room, room.host) < 0) room.host = pid;
@@ -235,11 +302,27 @@ function onMessage(ws, msg) {
       broadcastLobby(room);
       break;
     }
+    case 'team': { // sit down in the first free place of the chosen team (teams: seats 0+2 and 1+3)
+      if (room.phase !== 'lobby') return;
+      const t = msg.team === 1 ? 1 : 0;
+      if (me % 2 === t) return;
+      const s = [t, t + 2].find((x) => !room.seats[x]);
+      if (s === undefined) return send(ws, { t: 'error', text: 'В этой команде нет свободных мест.' });
+      room.seats[s] = room.seats[me]; room.seats[me] = null;
+      broadcastLobby(room);
+      break;
+    }
+    case 'mode':
+      if (host && room.phase === 'lobby') { room.mode = msg.mode === 'circle' ? 'circle' : 'normal'; broadcastLobby(room); }
+      break;
     case 'level':
       if (host && room.phase === 'lobby') { room.level = Math.max(0, Math.min(3, msg.level | 0)); broadcastLobby(room); }
       break;
     case 'start':
-      if (host && room.phase === 'lobby') startMatch(room);
+      if (host && room.phase === 'lobby') {
+        if (room.mode === 'circle') initCircle(room); else room.circle = null;
+        startMatch(room);
+      }
       break;
     case 'move': {
       const st = room.st;
@@ -266,9 +349,19 @@ function onMessage(ws, msg) {
       room.ready.add(ws.pid);
       maybeNext(room);
       break;
-    case 'again':
-      if (host && room.phase === 'gameOver') startMatch(room);
+    case 'again': {
+      // the host presses it; if the host has dropped out, any player still here can
+      const hs = seatOf(room, room.host);
+      const hostGone = hs < 0 || !room.seats[hs].ws;
+      if ((host || hostGone) && room.phase === 'gameOver') {
+        const c = room.circle;
+        if (c && c.done) initCircle(room); // the circle is over: start a fresh one
+        else if (c) { c.game++; seatCircleGame(room); }
+        startMatch(room);
+        broadcastLobby(room);
+      }
       break;
+    }
     case 'leave':
       room.seats[me] = null;
       ws.room = null;

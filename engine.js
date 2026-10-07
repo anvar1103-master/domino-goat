@@ -17,15 +17,36 @@
     }
     return arr;
   }
+  // A hand is dealt again when a player gets 5 or more doubles, or 6 or more bones of one suit
+  // (six bones carrying the same number).
+  function needsRedeal(hand) {
+    let doubles = 0;
+    const suit = [0, 0, 0, 0, 0, 0, 0];
+    hand.forEach((b) => {
+      if (b[0] === b[1]) doubles++;
+      suit[b[0]]++;
+      if (b[1] !== b[0]) suit[b[1]]++;
+    });
+    return doubles >= 5 || suit.some((n) => n >= 6);
+  }
+  function dealCounted(rnd) {
+    let redeals = 0;
+    for (;;) {
+      const s = shuffle(allBones(), rnd);
+      const hands = [0, 1, 2, 3].map((i) => s.slice(i * 7, i * 7 + 7));
+      if (!hands.some(needsRedeal) || redeals > 200) return { hands, redeals };
+      redeals++;
+    }
+  }
   function deal(rnd) {
-    const s = shuffle(allBones(), rnd);
-    return [0, 1, 2, 3].map((i) => s.slice(i * 7, i * 7 + 7));
+    return dealCounted(rnd).hands;
   }
 
   // chain: array of {a, b} oriented left-to-right; ends: [leftValue, rightValue] or null
   function newRound(opts) {
     opts = opts || {};
-    const hands = deal(opts.rnd);
+    const dealt = dealCounted(opts.rnd);
+    const hands = dealt.hands;
     let starter = opts.starter;
     let mustOpenWith11 = false;
     if (starter == null) {
@@ -42,6 +63,7 @@
       passes: 0,
       over: false,
       result: null,
+      redeals: dealt.redeals, // how many times the cards were dealt again
       played: [], // log of {seat, bone, side}
     };
   }
@@ -737,14 +759,19 @@
     return chooseExpert2(st, seat, moves, log, ctx);
   }
 
-  // Match scoring with the "13 to open" rule: a team's first points are held back until the
-  // pending total reaches 13. If three rounds pass without reaching 13, pending points burn
-  // and a new three-round window starts. After opening, points are added as usual.
+  // Match scoring with the "13 to open" rule: a team's first points are written only when the
+  // team collects 13 or more in a single round (`qual` is that round's own count: the hands of
+  // the losing team, not the sum of both sides in a fish). Smaller amounts are remembered but
+  // not written, even if they add up to 13 over several rounds. When the team finally opens,
+  // everything remembered is written with it. If three rounds pass without opening, the
+  // remembered points burn and a new three-round window starts. After opening, points are
+  // added as usual.
   const OPEN_AT = 13, WINDOW = 3;
   function newMatch() {
     return { score: [0, 0], pend: [0, 0], rounds: [0, 0], open: [false, false] };
   }
-  function scoreRound(m, loseTeam, pts) {
+  function scoreRound(m, loseTeam, pts, qual) {
+    if (qual == null) qual = pts;
     const info = [{ kind: 'none', pts: 0 }, { kind: 'none', pts: 0 }];
     for (let t = 0; t < 2; t++) {
       const got = t === loseTeam ? pts : 0;
@@ -754,8 +781,9 @@
         continue;
       }
       m.rounds[t]++;
+      const opens = t === loseTeam && qual >= OPEN_AT;
       m.pend[t] += got;
-      if (m.pend[t] >= OPEN_AT) {
+      if (opens) {
         m.open[t] = true;
         m.score[t] = m.pend[t];
         info[t] = { kind: 'open', pts: got, total: m.pend[t] };
@@ -780,8 +808,38 @@
     }
     return st.played.length ? st.played[st.played.length - 1].seat : 0;
   }
+  // What counts toward the "13 in one round" test: the pips the losing team itself holds
+  // (in a fish that is its own two hands, not the sum of all four), plus any carried bank.
+  function roundQual(r, loseTeam, carried) {
+    if (loseTeam == null) return 0;
+    const own = r.kind === 'fish' ? r.teamSums[loseTeam] : r.points;
+    return own + (carried || 0);
+  }
+
+  // ---------- Round-robin ("круг") ----------
+  // Six games: three with every possible pairing, then three more in the reverse order of seat
+  // changes. seating[seat] = player index (players are numbered by their seat in the first game;
+  // seats 0&2 and 1&3 are partners). The player in seat 0 stays, the other three shift.
+  const CIRCLE_GAMES = 6;
+  function circleStep(a, back) {
+    return back ? [a[0], a[2], a[3], a[1]] : [a[0], a[3], a[1], a[2]];
+  }
+  function circleSeating(game) {
+    let a = [0, 1, 2, 3];
+    for (let k = 1; k <= game; k++) a = circleStep(a, k >= 3);
+    return a;
+  }
+  // The team holding 101+ loses the game. A win or loss "dry" (the winners have 0 points,
+  // the "goat") is worth 2 points to each player instead of 1.
+  function matchResult(score) {
+    const loseTeam = score[0] >= 101 ? 0 : 1;
+    const winTeam = 1 - loseTeam;
+    const dry = score[winTeam] === 0;
+    return { winTeam, loseTeam, dry, delta: dry ? 2 : 1 };
+  }
   const api = {
-    OPEN_AT, WINDOW, newMatch, scoreRound, expertConfig, expert2Config,
+    OPEN_AT, WINDOW, newMatch, scoreRound, roundQual, expertConfig, expert2Config,
+    CIRCLE_GAMES, circleSeating, matchResult, needsRedeal, dealCounted,
     TEAM, pips, isDouble, allBones, deal, newRound, legalMoves, applyMove, pass, hasMove, clone, sumHand, botChoose, buildVoids, fishMaker,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
