@@ -135,7 +135,7 @@ button { font: inherit; color: inherit; }
 .flyer { position: fixed; left: 0; top: 0; z-index: 30; pointer-events: none; transform-style: preserve-3d; will-change: transform; }
 .flyer canvas { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .flyer canvas.b { transform: rotateX(180deg); }
-.peek { position: fixed; right: max(12px, env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); z-index: 15; border: 0; border-radius: 999px; padding: 12px 22px; font-weight: 700; font-size: 15px; background: var(--brass); color: var(--ink); box-shadow: 0 8px 24px rgba(0,0,0,0.45); cursor: pointer; }
+.peek { position: fixed; right: max(10px, env(safe-area-inset-right, 0px)); bottom: max(10px, env(safe-area-inset-bottom, 0px)); z-index: 15; border: 0; border-radius: 999px; padding: 6px 12px; font-weight: 700; font-size: 11.5px; line-height: 1.2; background: var(--brass); color: var(--ink); box-shadow: 0 4px 14px rgba(0,0,0,0.45); cursor: pointer; opacity: 0.94; }
 .peek[hidden] { display: none; }
 .seat .who { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12px; font-weight: 600; }
 .seat .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
@@ -348,12 +348,17 @@ details input { margin-top: 8px; }
 .lobby-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .lobby-head h2 { font-size: 34px; letter-spacing: 0.18em; }
 .btn.sm { padding: 9px 14px; font-size: 14px; }
-.lobby-seats { display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-areas: ". top ." "left . right" ". bottom ."; gap: 8px; }
-.lseat { border-radius: 12px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; font: inherit; color: var(--ivory); cursor: pointer; min-width: 0; }
-.lseat.top { grid-area: top; } .lseat.left { grid-area: left; } .lseat.right { grid-area: right; } .lseat.bottom { grid-area: bottom; }
-.lseat.mate { background: rgba(94,207,147,0.14); border: 1.5px solid rgba(94,207,147,0.6); }
-.lseat.foe { background: rgba(238,122,92,0.14); border: 1.5px solid rgba(238,122,92,0.6); }
-.lseat.empty { border-style: dashed; opacity: 0.8; }
+.lobby-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.lteam { border-radius: 14px; padding: 8px; display: flex; flex-direction: column; gap: 6px; border: 1.5px solid var(--line); background: rgba(8,37,33,0.5); min-width: 0; }
+.lteam.mine { border-color: rgba(94,207,147,0.7); background: rgba(94,207,147,0.10); }
+.lteam .th { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-height: 26px; }
+.lteam .th b { font-size: 13px; white-space: nowrap; }
+.lteam .th em { font-style: normal; font-size: 11px; color: var(--us); font-weight: 700; }
+.lteam .go { white-space: nowrap; border: 1.5px solid var(--brass); background: transparent; color: var(--brass); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.lteam .go:disabled { opacity: 0.4; cursor: default; }
+.lseat { border-radius: 12px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 2px; font: inherit; color: var(--ivory); cursor: pointer; min-width: 0; background: rgba(8,37,33,0.6); border: 1.5px solid var(--line); }
+.lseat.me { border-color: rgba(94,207,147,0.8); }
+.lseat.empty { border-style: dashed; opacity: 0.85; }
 .lseat:disabled { cursor: default; }
 .lseat .ln { font-weight: 700; font-size: 13px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lseat .lr { font-size: 11px; color: var(--muted); }
@@ -370,6 +375,15 @@ details input { margin-top: 8px; }
 .mid .rd { display: flex; align-items: center; gap: 4px; }
 .mid .rd .logo { width: 14px; height: 14px; border-radius: 4px; }
 .res-head .logo { width: 56px; height: 56px; }
+.circle-tab { display: flex; flex-direction: column; gap: 4px; }
+.circle-tab .cr { display: grid; grid-template-columns: 1fr auto 52px; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 10px; background: rgba(8,37,33,0.55); font-size: 14px; font-weight: 600; }
+.circle-tab .cr.me { outline: 1.5px solid rgba(94,207,147,0.7); }
+.circle-tab .cr.lead { background: rgba(220,168,67,0.18); }
+.circle-tab .cr .nm2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.circle-tab .cr .dl { font-size: 12px; font-variant-numeric: tabular-nums; }
+.circle-tab .cr .dl.up { color: var(--us); } .circle-tab .cr .dl.dn { color: var(--them); }
+.circle-tab .cr .tt { text-align: right; font-family: var(--font-display); font-size: 20px; font-variant-numeric: tabular-nums; }
+.circle-hist { font-size: 12px; color: var(--muted); line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -445,7 +459,9 @@ window.addEventListener('error', function (ev) {
         <li>Ход по часовой стрелке. Нет подходящей кости, значит пас. Кость можно перетащить к нужному концу стола или нажать на неё, а потом на место на столе.</li>
         <li>Кто первым выложил все кости, тот выиграл раздачу. Проигравшая пара записывает сумму очков на руках у обоих игроков. Одинокая кость 0:0, оставшаяся на руках, считается за 10 очков.</li>
         <li>Рыба: стол закрыт, никто не может сходить. Суммы очков на руках у двух игроков каждой пары складываются. Выигрывает пара с меньшей суммой, а все очки со всех четырёх рук записываются проигравшей паре. Если суммы равны, это ничья: вся сумма уходит в банк и записывается проигравшей паре в следующей раздаче.</li>
-        <li>Первые очки пара получает не сразу. Они копятся и записываются, когда набралось 13. Если за три раздачи 13 не набралось, накопленное сгорает и счёт раздач начинается заново. После открытия очки добавляются как обычно.</li>
+        <li>Первые очки пара получает не сразу. Они записываются, только когда пара набрала 13 и больше в одной раздаче. Если меньше 13, очки запоминаются, но не записываются, даже когда за несколько раздач их набирается больше 13. При рыбе считается сумма на руках у самой проигравшей пары: 12 у неё и 10 у соперников, это 22 очка в памяти, но не в счёте. Как только пара набрала 13 за раздачу, записывается всё, что она помнила. Если за три раздачи записи не было, запомненное сгорает. После первой записи очки добавляются как обычно.</li>
+        <li>Если после раздачи у игрока 5 и больше дублей или 6 и больше костей одной масти, кости раздаются заново.</li>
+        <li>Онлайн есть игра в круг: шесть партий, в первых трёх каждый играет в паре с каждым, затем места меняются в обратном порядке. Игрок получает +1 за победу и −1 за поражение, «в сухую» (у победителей 0) это +2 и −2. Очки игроков складываются за все шесть партий.</li>
         <li>Пара, набравшая 101 очко, проигрывает. Если при этом у другой пары 0, это «козёл».</li>
       </ul>
     </details>
@@ -475,8 +491,10 @@ window.addEventListener('error', function (ev) {
   <div class="card net">
     <div class="sub">Комната</div>
     <div class="lobby-head"><h2 id="lobbyCode">····</h2><button class="btn alt sm" id="lobbyCopy">Пригласить</button></div>
-    <p>Нажмите на свободное место, чтобы пересесть. Сидящий напротив — ваш партнёр.</p>
-    <div class="lobby-seats" id="lobbySeats"></div>
+    <p>Выберите команду: нажмите «Перейти» у другой команды или на свободное место. Игроки одной команды — партнёры.</p>
+    <div class="lobby-teams" id="lobbySeats"></div>
+    <div class="lobby-lv"><span>Режим</span><div class="seg wide" id="lobbyMode"></div></div>
+    <p class="hint" id="lobbyModeNote"></p>
     <div class="lobby-lv"><span>Уровень ботов</span><div class="seg wide" id="lobbyLevels"></div></div>
     <button class="btn" id="lobbyStart">Начать игру</button>
     <p class="netmsg" id="lobbyWait">Ждём, когда хозяин комнаты начнёт игру.</p>
@@ -520,15 +538,36 @@ window.addEventListener('error', function (ev) {
     }
     return arr;
   }
+  // A hand is dealt again when a player gets 5 or more doubles, or 6 or more bones of one suit
+  // (six bones carrying the same number).
+  function needsRedeal(hand) {
+    let doubles = 0;
+    const suit = [0, 0, 0, 0, 0, 0, 0];
+    hand.forEach((b) => {
+      if (b[0] === b[1]) doubles++;
+      suit[b[0]]++;
+      if (b[1] !== b[0]) suit[b[1]]++;
+    });
+    return doubles >= 5 || suit.some((n) => n >= 6);
+  }
+  function dealCounted(rnd) {
+    let redeals = 0;
+    for (;;) {
+      const s = shuffle(allBones(), rnd);
+      const hands = [0, 1, 2, 3].map((i) => s.slice(i * 7, i * 7 + 7));
+      if (!hands.some(needsRedeal) || redeals > 200) return { hands, redeals };
+      redeals++;
+    }
+  }
   function deal(rnd) {
-    const s = shuffle(allBones(), rnd);
-    return [0, 1, 2, 3].map((i) => s.slice(i * 7, i * 7 + 7));
+    return dealCounted(rnd).hands;
   }
 
   // chain: array of {a, b} oriented left-to-right; ends: [leftValue, rightValue] or null
   function newRound(opts) {
     opts = opts || {};
-    const hands = deal(opts.rnd);
+    const dealt = dealCounted(opts.rnd);
+    const hands = dealt.hands;
     let starter = opts.starter;
     let mustOpenWith11 = false;
     if (starter == null) {
@@ -545,6 +584,7 @@ window.addEventListener('error', function (ev) {
       passes: 0,
       over: false,
       result: null,
+      redeals: dealt.redeals, // how many times the cards were dealt again
       played: [], // log of {seat, bone, side}
     };
   }
@@ -1240,14 +1280,19 @@ window.addEventListener('error', function (ev) {
     return chooseExpert2(st, seat, moves, log, ctx);
   }
 
-  // Match scoring with the "13 to open" rule: a team's first points are held back until the
-  // pending total reaches 13. If three rounds pass without reaching 13, pending points burn
-  // and a new three-round window starts. After opening, points are added as usual.
+  // Match scoring with the "13 to open" rule: a team's first points are written only when the
+  // team collects 13 or more in a single round (`qual` is that round's own count: the hands of
+  // the losing team, not the sum of both sides in a fish). Smaller amounts are remembered but
+  // not written, even if they add up to 13 over several rounds. When the team finally opens,
+  // everything remembered is written with it. If three rounds pass without opening, the
+  // remembered points burn and a new three-round window starts. After opening, points are
+  // added as usual.
   const OPEN_AT = 13, WINDOW = 3;
   function newMatch() {
     return { score: [0, 0], pend: [0, 0], rounds: [0, 0], open: [false, false] };
   }
-  function scoreRound(m, loseTeam, pts) {
+  function scoreRound(m, loseTeam, pts, qual) {
+    if (qual == null) qual = pts;
     const info = [{ kind: 'none', pts: 0 }, { kind: 'none', pts: 0 }];
     for (let t = 0; t < 2; t++) {
       const got = t === loseTeam ? pts : 0;
@@ -1257,8 +1302,9 @@ window.addEventListener('error', function (ev) {
         continue;
       }
       m.rounds[t]++;
+      const opens = t === loseTeam && qual >= OPEN_AT;
       m.pend[t] += got;
-      if (m.pend[t] >= OPEN_AT) {
+      if (opens) {
         m.open[t] = true;
         m.score[t] = m.pend[t];
         info[t] = { kind: 'open', pts: got, total: m.pend[t] };
@@ -1283,8 +1329,38 @@ window.addEventListener('error', function (ev) {
     }
     return st.played.length ? st.played[st.played.length - 1].seat : 0;
   }
+  // What counts toward the "13 in one round" test: the pips the losing team itself holds
+  // (in a fish that is its own two hands, not the sum of all four), plus any carried bank.
+  function roundQual(r, loseTeam, carried) {
+    if (loseTeam == null) return 0;
+    const own = r.kind === 'fish' ? r.teamSums[loseTeam] : r.points;
+    return own + (carried || 0);
+  }
+
+  // ---------- Round-robin ("круг") ----------
+  // Six games: three with every possible pairing, then three more in the reverse order of seat
+  // changes. seating[seat] = player index (players are numbered by their seat in the first game;
+  // seats 0&2 and 1&3 are partners). The player in seat 0 stays, the other three shift.
+  const CIRCLE_GAMES = 6;
+  function circleStep(a, back) {
+    return back ? [a[0], a[2], a[3], a[1]] : [a[0], a[3], a[1], a[2]];
+  }
+  function circleSeating(game) {
+    let a = [0, 1, 2, 3];
+    for (let k = 1; k <= game; k++) a = circleStep(a, k >= 3);
+    return a;
+  }
+  // The team holding 101+ loses the game. A win or loss "dry" (the winners have 0 points,
+  // the "goat") is worth 2 points to each player instead of 1.
+  function matchResult(score) {
+    const loseTeam = score[0] >= 101 ? 0 : 1;
+    const winTeam = 1 - loseTeam;
+    const dry = score[winTeam] === 0;
+    return { winTeam, loseTeam, dry, delta: dry ? 2 : 1 };
+  }
   const api = {
-    OPEN_AT, WINDOW, newMatch, scoreRound, expertConfig, expert2Config,
+    OPEN_AT, WINDOW, newMatch, scoreRound, roundQual, expertConfig, expert2Config,
+    CIRCLE_GAMES, circleSeating, matchResult, needsRedeal, dealCounted,
     TEAM, pips, isDouble, allBones, deal, newRound, legalMoves, applyMove, pass, hasMove, clone, sumHand, botChoose, buildVoids, fishMaker,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
@@ -1562,6 +1638,7 @@ function beginRound(starter) {
     G.shuffle = null; G.deal = true;
     renderAll();
     G.deal = false;
+    if (G.st.redeals) toast('Кости пересданы: у кого-то было 5 дублей или 6 костей одной масти', 2800);
     setStatus((s === 0 ? 'Вы ходите первым' : '<b>' + NAMES[s] + '</b> ходит первым') + (G.st.mustOpenWith11 ? (s === 0 ? ', у вас дубль 1:1' : ', у него дубль 1:1') : ', любой костью'));
     schedule(nextTurn, 700);
   }, dur);
@@ -1667,20 +1744,21 @@ function renderScore() {
   $('sUs').textContent = G.score[0]; $('sThem').textContent = G.score[1];
   $('bUs').style.width = Math.min(100, G.score[0] / 101 * 100) + '%';
   $('bThem').style.width = Math.min(100, G.score[1] / 101 * 100) + '%';
-  $('roundLbl').textContent = 'Раздача ' + G.round + (G.carry ? ' · банк ' + G.carry : '');
+  const cl = NET.on && NET.circle ? 'Партия ' + NET.circle.game + '/' + NET.circle.games + ' · ' : '';
+  $('roundLbl').textContent = cl + 'Раздача ' + G.round + (G.carry ? ' · банк ' + G.carry : '');
   [['pUs', 0], ['pThem', 1]].forEach(([id, t]) => {
     const el = $(id), m = G.m;
     if (!m || m.open[t]) { el.textContent = ''; return; }
     const left = Domino.WINDOW - m.rounds[t];
-    el.textContent = m.pend[t] + '/' + Domino.OPEN_AT + ' · ещё ' + left + ' разд.';
-    el.title = 'Ждёт открытия: ' + m.pend[t] + ' из ' + Domino.OPEN_AT + ', осталось раздач: ' + left;
+    el.textContent = 'в памяти ' + m.pend[t];
+    el.title = 'Очки запомнены, но не записаны: нужно ' + Domino.OPEN_AT + ' и больше за одну раздачу. В памяти ' + m.pend[t] + ', осталось раздач: ' + left;
   });
 }
 function holdNote(info, t) {
   const i = info[t];
-  if (i.kind === 'hold') return 'Очки пока не записаны: набрано ' + i.pend + ' из ' + Domino.OPEN_AT + ', осталось раздач: ' + i.left + '.';
-  if (i.kind === 'burn') return 'За три раздачи не набрано ' + Domino.OPEN_AT + ', накопленные ' + i.lost + ' очков сгорели.';
-  if (i.kind === 'open') return 'Набрано ' + Domino.OPEN_AT + ' и больше, записано очков: ' + i.total + '.';
+  if (i.kind === 'hold') return 'Очки не записаны: меньше ' + Domino.OPEN_AT + ' за раздачу. В памяти ' + i.pend + ', осталось раздач: ' + i.left + '.';
+  if (i.kind === 'burn') return 'За три раздачи не набралось ' + Domino.OPEN_AT + ' за одну, запомненные ' + i.lost + ' очков сгорели.';
+  if (i.kind === 'open') return 'Набрано ' + Domino.OPEN_AT + ' и больше за раздачу, записано очков: ' + i.total + '.';
   return '';
 }
 function movesFor(i) {
@@ -2218,7 +2296,7 @@ function endRound(net) {
     } else {
       G.carry += r.total;
     }
-    info = Domino.scoreRound(G.m, loseTeam, pts);
+    info = Domino.scoreRound(G.m, loseTeam, pts, Domino.roundQual(r, loseTeam, carried));
   }
   renderScore();
   const notes = [0, 1].map((t) => (holdNote(info, t) ? (t === 0 ? 'Мы: ' : 'Они: ') + holdNote(info, t) : '')).filter(Boolean);
@@ -2247,7 +2325,7 @@ function endRound(net) {
     '<div class="hands-rev">' + rows + '</div>' +
     (r.kind === 'fish' ? '<p>Сумма пар: мы <b>' + r.teamSums[0] + '</b>, они <b>' + r.teamSums[1] + '</b></p>' : '') +
     '<p>Счёт: мы <b style="color:var(--us)">' + G.score[0] + '</b>, они <b style="color:var(--them)">' + G.score[1] + '</b> из 101</p>' +
-    '<div class="btn-row"><button class="btn alt" id="peekTable">Посмотреть стол</button><button class="btn" id="nextBtn">' + (gameEnd ? 'Итог игры' : 'Дальше') + '</button></div>';
+    '<div class="btn-row"><button class="btn alt" id="peekTable">Посмотреть стол</button><button class="btn" id="nextBtn">' + (gameEnd ? (NET.on && NET.circle ? 'Итог партии' : 'Итог игры') : 'Дальше') + '</button></div>';
   card.querySelectorAll('.hr').forEach((row) => {
     const s = +row.dataset.s;
     const holder = row.querySelector('.bones');
@@ -2272,6 +2350,7 @@ function endRound(net) {
   });
 }
 function endGame() {
+  if (NET.on && NET.circle) return endCircleGame();
   G.over = true;
   const lost = G.score[0] >= 101;
   const goat = lost ? G.score[1] === 0 : G.score[0] === 0;
@@ -2293,11 +2372,58 @@ function endGame() {
   $('lvlBtn').addEventListener('click', () => { $('roundModal').hidden = true; if (NET.on) return netLeave(); buildLevels(); $('startScreen').hidden = false; });
 }
 
+
+/* online circle: one game of six is over; show what every player has so far */
+function signed(n) { return n > 0 ? '+' + n : n < 0 ? '−' + Math.abs(n) : '0'; }
+function endCircleGame() {
+  G.over = true;
+  const c = NET.circle, h = c.history[c.history.length - 1];
+  const myTeam = NET.me & 1, won = h.winTeam === myTeam;
+  if (won) stats.w++; else stats.l++;
+  saveStats();
+  const rows = c.players.map((p, i) => ({ p, i })).sort((x, y) => y.p.pts - x.p.pts);
+  const top = rows[0].p.pts;
+  const table = rows.map(({ p, i }) => {
+    const d = h.deltas ? h.deltas[i] : 0;
+    return '<div class="cr' + (i === NET.circleMe ? ' me' : '') + (c.done && p.pts === top ? ' lead' : '') + '"><span class="nm2"></span><span class="dl ' + (d > 0 ? 'up' : d < 0 ? 'dn' : '') + '">' + signed(d) + '</span><span class="tt">' + signed(p.pts) + '</span></div>';
+  }).join('');
+  let title;
+  if (c.done) {
+    const lead = rows.filter((r) => r.p.pts === top).map((r) => r.p.name);
+    title = 'Круг окончен. ' + (lead.length > 1 ? 'Лидеры: ' : 'Лидер: ') + lead.join(', ');
+  } else title = won ? (h.dry ? 'Козёл у соперников. Победа' : 'Победа в партии') : (h.dry ? 'Козёл. Вы проиграли' : 'Поражение в партии');
+  const mine = h.teams[myTeam].join(' + '), theirs = h.teams[1 - myTeam].join(' + ');
+  let next = '', mate = '';
+  if (!c.done && c.next) {
+    const arr = Domino.circleSeating(c.game); // c.game is 1-based, so this is the next game
+    const seat = arr.indexOf(NET.circleMe);
+    mate = seat >= 0 ? c.players[arr[(seat + 2) % 4]].name : '';
+    next = '<p>Следующая партия: ' + c.next[0].join(' + ') + ' против ' + c.next[1].join(' + ') + (mate ? '. Ваш партнёр: <b></b>.' : '.') + '</p>';
+  }
+  const hist = c.done ? '<div class="circle-hist">' + c.history.map((g) => g.game + '. ' + g.teams[0].join(' + ') + ' ' + g.score[0] + ' : ' + g.score[1] + ' ' + g.teams[1].join(' + ') + (g.dry ? ' · козёл' : '')).join('<br>') + '</div>' : '';
+  const card = $('roundCard');
+  card.innerHTML =
+    '<div class="res-head"><i class="logo"></i><div class="sub">Круг · партия ' + h.game + ' из ' + c.games + (c.done ? ' · итог' : '') + '</div><h2></h2>' +
+    '<p>Счёт партии: ' + mine + ' <b>' + h.score[myTeam] + '</b>, ' + theirs + ' <b>' + h.score[1 - myTeam] + '</b>. ' + (h.dry ? 'Победа в сухую: +2 и −2.' : 'За победу +1, за поражение −1.') + '</p></div>' +
+    '<div class="circle-tab">' + table + '</div>' + next + hist +
+    '<div class="btn-row"><button class="btn alt" id="lvlBtn">Выйти</button><button class="btn" id="againBtn">' + (c.done ? 'Новый круг' : 'Следующая партия') + '</button></div>';
+  // names are user input: put them in as text
+  card.querySelector('h2').textContent = title;
+  card.querySelectorAll('.cr .nm2').forEach((el, k) => { el.textContent = rows[k].p.name + (rows[k].i === NET.circleMe ? ' (вы)' : ''); });
+  const mb = card.querySelector('p b:empty'); if (mb) mb.textContent = mate;
+  $('roundModal').hidden = false;
+  $('againBtn').addEventListener('click', () => {
+    if (NET.host) { netSend({ t: 'again' }); $('roundModal').hidden = true; }
+    else toast('Дальше игру ведёт хозяин комнаты', 1800);
+  });
+  $('lvlBtn').addEventListener('click', () => { $('roundModal').hidden = true; netLeave(); });
+}
+
 /* menu */
 $('menuBtn').addEventListener('click', () => {
   if (!G.st) return;
   if (NET.on) {
-    $('menuInfo').textContent = 'Комната ' + NET.code + '. Счёт ' + G.score[0] + ':' + G.score[1] + '. Игра продолжается, пока открыто меню.';
+    $('menuInfo').textContent = 'Комната ' + NET.code + (NET.circle ? '. Круг, партия ' + NET.circle.game + ' из ' + NET.circle.games : '') + '. Счёт ' + G.score[0] + ':' + G.score[1] + '. Игра продолжается, пока открыто меню.';
     $('newGameBtn').textContent = 'Выйти из комнаты';
     $('menuModal').hidden = false;
     return;
@@ -2388,30 +2514,61 @@ function netOnMessage(m) {
 }
 
 /* ---------- lobby ---------- */
-const SEAT_POS = ['bottom', 'left', 'top', 'right'];
 function netLobby(m) {
   NET.lobby = m;
   const me = m.seats.findIndex((p) => p.pid === NET.pid);
   if (me >= 0) NET.me = me;
   NET.host = m.host === NET.pid;
-  if (m.phase !== 'lobby') { netNames(m.seats.map((p) => p.name), m.seats.map((p) => p.human)); return; }
+  if (m.circle) NET.circle = m.circle;
+  if (m.phase !== 'lobby') { netNames(m.seats.map((p) => p.name), m.seats.map((p) => p.human)); if (G.st) renderScore(); return; }
   $('netScreen').hidden = true; $('startScreen').hidden = true;
   $('lobbyScreen').hidden = false;
   $('lobbyCode').textContent = m.code;
+  // two teams of two; partners sit opposite each other (server seats 0+2 and 1+3)
   const box = $('lobbySeats');
   box.innerHTML = '';
-  for (let l = 0; l < 4; l++) {
-    const s = (l + NET.me) % 4, p = m.seats[s];
-    const el = document.createElement('button');
-    el.type = 'button';
-    el.className = 'lseat ' + SEAT_POS[l] + (l % 2 === 0 ? ' mate' : ' foe') + (p.human ? '' : ' empty');
-    const role = (l === 0 ? 'вы' : l === 2 ? 'партнёр' : 'соперник') + (p.human ? '' : ' · бот');
-    el.innerHTML = '<span class="ln"></span><span class="lr">' + role + (p.human && !p.online ? ' · нет связи' : '') + '</span>';
-    el.querySelector('.ln').textContent = p.human ? p.name + (p.pid === m.host ? ' ★' : '') : 'Свободно';
-    if (!p.human) el.addEventListener('click', () => netSend({ t: 'seat', seat: s }));
-    else el.disabled = true;
-    box.appendChild(el);
-  }
+  const myTeam = NET.me & 1;
+  [0, 1].forEach((t) => {
+    const team = document.createElement('div');
+    team.className = 'lteam' + (t === myTeam ? ' mine' : '');
+    const head = document.createElement('div');
+    head.className = 'th';
+    head.innerHTML = '<b>Команда ' + (t + 1) + '</b>';
+    if (t === myTeam) head.insertAdjacentHTML('beforeend', '<em>ваша</em>');
+    else {
+      const go = document.createElement('button');
+      go.type = 'button'; go.className = 'go'; go.textContent = 'Перейти';
+      go.disabled = ![t, t + 2].some((s) => !m.seats[s].human);
+      go.addEventListener('click', () => netSend({ t: 'team', team: t }));
+      head.appendChild(go);
+    }
+    team.appendChild(head);
+    [t, t + 2].forEach((s) => {
+      const p = m.seats[s];
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.className = 'lseat' + (s === NET.me ? ' me' : '') + (p.human ? '' : ' empty');
+      el.innerHTML = '<span class="ln"></span><span class="lr"></span>';
+      el.querySelector('.ln').textContent = p.human ? p.name + (p.pid === m.host ? ' ★' : '') : 'Свободно';
+      el.querySelector('.lr').textContent = p.human ? (s === NET.me ? 'вы' : 'игрок') + (p.online ? '' : ' · нет связи') : 'бот · сесть сюда';
+      if (!p.human) el.addEventListener('click', () => netSend({ t: 'seat', seat: s }));
+      else el.disabled = true;
+      team.appendChild(el);
+    });
+    box.appendChild(team);
+  });
+  const md = $('lobbyMode');
+  md.innerHTML = '';
+  [['normal', 'Одна партия'], ['circle', 'Круг, 6 партий']].forEach(([k, n]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = n; b.className = k === m.mode ? 'on' : '';
+    b.disabled = !NET.host;
+    b.addEventListener('click', () => netSend({ t: 'mode', mode: k }));
+    md.appendChild(b);
+  });
+  const note = m.mode === 'circle' ? 'Круг: шесть партий. После каждой партии пары меняются: в первых трёх каждый сыграет в паре с каждым, потом места меняются в обратном порядке. За победу игрок получает +1, за поражение −1, «в сухую» ±2. Команды выше задают только первую партию.' : '';
+  $('lobbyModeNote').textContent = note;
+  $('lobbyModeNote').hidden = !note;
   const lv = $('lobbyLevels');
   lv.innerHTML = '';
   LEVELS.forEach((L, i) => {
@@ -2444,6 +2601,7 @@ function netState(m) {
   $('roundModal').hidden = true; $('peekBtn').hidden = true;
   G.paused = false; G.over = false;
   G.level = m.level;
+  NET.circle = m.circle || null; NET.circleMe = m.circleMe == null ? -1 : m.circleMe;
   netNames(m.names, m.humans);
   const ph = () => [-1, -1];
   const hands = [0, 1, 2, 3].map((l) => {
@@ -2472,12 +2630,13 @@ function netState(m) {
       G.shuffle = null; G.deal = true;
       renderAll();
       G.deal = false;
+      if (m.redeals) toast('Кости пересданы: у кого-то было 5 дублей или 6 костей одной масти', 2800);
       setStatus((s === 0 ? 'Вы ходите первым' : '<b>' + NAMES[s] + '</b> ходит первым') + (G.st.mustOpenWith11 ? (s === 0 ? ', у вас дубль 1:1' : ', у него дубль 1:1') : ', любой костью'));
       setTimeout(() => { nextTurn(); netDone(); }, 500);
     }, REDUCED ? 200 : G.shuffle.dur);
   } else {
     renderAll();
-    if (m.roundEnd) { NET.q.push(Object.assign({ t: 'roundEnd' }, m.roundEnd, { score: m.score, pend: m.pend, rounds: m.rounds, open: m.open })); netPump(); }
+    if (m.roundEnd) { NET.q.push(Object.assign({ t: 'roundEnd' }, m.roundEnd, { score: m.score, pend: m.pend, rounds: m.rounds, open: m.open, circle: m.circle, circleMe: m.circleMe })); netPump(); }
     else nextTurn();
   }
 }
@@ -2517,6 +2676,7 @@ function netPump() {
     return;
   }
   if (m.t === 'roundEnd') {
+    if (m.circle) { NET.circle = m.circle; NET.circleMe = m.circleMe == null ? -1 : m.circleMe; }
     const r = Object.assign({}, m.result);
     if (r.winner != null) r.winner = rotS(r.winner);
     if (r.winTeam != null) r.winTeam = rotT(r.winTeam);
@@ -2557,7 +2717,7 @@ function netTurn() {
 function netLeave() {
   netSend({ t: 'leave' });
   const ws = NET.ws;
-  NET.on = false; NET.code = ''; NET.ws = null; NET.q = []; NET.busy = false;
+  NET.on = false; NET.code = ''; NET.ws = null; NET.q = []; NET.busy = false; NET.circle = null;
   if (ws) try { ws.close(); } catch (e) {}
   netSave({ code: '' });
   try { history.replaceState(null, '', location.pathname); } catch (e) {}
