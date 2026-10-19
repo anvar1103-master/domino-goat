@@ -402,7 +402,7 @@ window.addEventListener('error', function (ev) {
 <div id="app">
   <header class="top">
     <div class="score us">
-      <div class="lbl">Мы <span>вы + север</span></div>
+      <div class="lbl">Мы <span id="lblUs">вы + Бывалый</span></div>
       <div class="val"><span id="sUs">0</span><small>/ 101</small></div>
       <div class="bar"><i id="bUs"></i></div>
       <div class="pend" id="pUs"></div>
@@ -419,7 +419,7 @@ window.addEventListener('error', function (ev) {
       </div>
     </div>
     <div class="score them">
-      <div class="lbl"><span>запад + восток</span> Они</div>
+      <div class="lbl"><span id="lblThem">Трус + Балбес</span> Они</div>
       <div class="val"><span id="sThem">0</span><small>/ 101</small></div>
       <div class="bar"><i id="bThem"></i></div>
       <div class="pend" id="pThem"></div>
@@ -427,15 +427,15 @@ window.addEventListener('error', function (ev) {
   </header>
 
   <section class="table" id="table" aria-label="Стол">
-    <div class="seat mate n" id="seat2"><div class="say" id="say2"></div><div class="who"><i class="dot"></i><span>Партнёр</span><b class="think"><i></i><i></i><i></i></b><em class="cnt" id="cnt2">7</em></div><div class="backs" id="backs2"></div><div class="last" id="last2"></div></div>
-    <div class="seat foe w" id="seat1"><div class="say" id="say1"></div><div class="who"><i class="dot"></i><span>Запад</span><b class="think"><i></i><i></i><i></i></b><em class="cnt" id="cnt1">7</em></div><div class="backs" id="backs1"></div><div class="last" id="last1"></div></div>
+    <div class="seat mate n" id="seat2"><div class="say" id="say2"></div><div class="who"><i class="dot"></i><span>Бывалый</span><b class="think"><i></i><i></i><i></i></b><em class="cnt" id="cnt2">7</em></div><div class="backs" id="backs2"></div><div class="last" id="last2"></div></div>
+    <div class="seat foe w" id="seat1"><div class="say" id="say1"></div><div class="who"><i class="dot"></i><span>Трус</span><b class="think"><i></i><i></i><i></i></b><em class="cnt" id="cnt1">7</em></div><div class="backs" id="backs1"></div><div class="last" id="last1"></div></div>
     <section class="board-wrap" id="boardWrap">
       <div class="circle" id="circle" hidden><div class="circle-top"><span id="circleNo">Круг 1</span><span class="circle-sub">кто что поставил</span></div><div class="circle-cells" id="circleCells"></div></div>
       <canvas id="board"></canvas>
       <div class="board-hint" id="boardHint">Стол пуст</div>
       <div id="toast"></div>
     </section>
-    <div class="seat foe e" id="seat3"><div class="say" id="say3"></div><div class="who"><i class="dot"></i><span>Восток</span><b class="think"><i></i><i></i><i></i></b><em class="cnt" id="cnt3">7</em></div><div class="backs" id="backs3"></div><div class="last" id="last3"></div></div>
+    <div class="seat foe e" id="seat3"><div class="say" id="say3"></div><div class="who"><i class="dot"></i><span>Балбес</span><b class="think"><i></i><i></i><i></i></b><em class="cnt" id="cnt3">7</em></div><div class="backs" id="backs3"></div><div class="last" id="last3"></div></div>
   </section>
 
   <div class="actions" id="actions"><div class="status" id="status"></div></div>
@@ -446,7 +446,7 @@ window.addEventListener('error', function (ev) {
 <div class="overlay" id="startScreen">
   <div class="card start">
     <div class="start-brand"><i class="logo" role="img" aria-label="Domino Goat"></i><div><div class="sub">Козёл · 2 на 2</div><h1>Domino Goat</h1></div></div>
-    <p>Вы играете в паре с севером против запада и востока. Игра идёт до 101 очка, набравшая их пара проигрывает.</p>
+    <p>Вы играете в паре с Бывалым против Труса и Балбеса. Игра идёт до 101 очка, набравшая их пара проигрывает.</p>
     <div class="lvls" id="lvls"></div>
     <label class="toggle"><input type="checkbox" data-autopass checked><span>Пропускать ход автоматически, если нечем ходить</span></label>
     <div class="speed"><div class="speed-l">Скорость ходов ботов</div><div class="seg" data-speed>
@@ -454,7 +454,7 @@ window.addEventListener('error', function (ev) {
     <details>
       <summary>Правила</summary>
       <ul>
-        <li>28 костей, каждому по 7. Партнёры сидят напротив: вы и север против запада и востока.</li>
+        <li>28 костей, каждому по 7. Партнёры сидят напротив друг друга. Против ботов вы с Бывалым играете против Труса и Балбеса.</li>
         <li>Первую раздачу игры начинает тот, у кого дубль 1:1. Если после раздачи ни у одной пары нет записанных очков, раздачу снова открывает владелец 1:1. Когда очки уже есть, первым ходит любой костью тот, кто вышел, а после рыбы тот, кто её сделал (поставил последнюю кость).</li>
         <li>Ход по часовой стрелке. Нет подходящей кости, значит пас. Кость можно перетащить к нужному концу стола или нажать на неё, а потом на место на столе.</li>
         <li>Кто первым выложил все кости, тот выиграл раздачу. Проигравшая пара записывает сумму очков на руках у обоих игроков. Одинокая кость 0:0, оставшаяся на руках, считается за 10 очков.</li>
@@ -1573,7 +1573,7 @@ function boneCanvas(a, b, vertical, w, h, opts) {
 
 /* ---------- Game flow ---------- */
 const $ = (id) => document.getElementById(id);
-const NAMES = ['Вы', 'Запад', 'Партнёр', 'Восток'];
+const NAMES = ['Вы', 'Трус', 'Бывалый', 'Балбес']; // bots: west, partner (north), east
 const NAMES0 = NAMES.slice();
 const NET = { on: false, ws: null, me: 0, code: '', pid: '', host: false, q: [], busy: false, lobby: null, myMove: null };
 const LEVELS = [
@@ -1742,6 +1742,7 @@ function renderSeats() {
 }
 function renderScore() {
   $('sUs').textContent = G.score[0]; $('sThem').textContent = G.score[1];
+  $('lblUs').textContent = 'вы + ' + NAMES[2]; $('lblThem').textContent = NAMES[1] + ' + ' + NAMES[3];
   $('bUs').style.width = Math.min(100, G.score[0] / 101 * 100) + '%';
   $('bThem').style.width = Math.min(100, G.score[1] / 101 * 100) + '%';
   const cl = NET.on && NET.circle ? 'Партия ' + NET.circle.game + '/' + NET.circle.games + ' · ' : '';
@@ -2305,7 +2306,7 @@ function endRound(net) {
   let title, sub;
   const meWon = r.kind === 'out' ? r.winTeam === 0 : (!r.draw && r.winTeam === 0);
   if (r.kind === 'out') {
-    title = r.winner === 0 ? 'Вы вышли' : r.winner === 2 ? 'Партнёр вышел' : NAMES[r.winner] + ' вышел';
+    title = r.winner === 0 ? 'Вы вышли' : NAMES[r.winner] + ' вышел';
     sub = 'Первым выложил все кости';
   } else if (r.draw) { title = 'Рыба, ничья'; sub = 'Суммы пар равны. Все ' + r.total + ' очков запишутся проигравшей паре в следующей раздаче'; }
   else { title = 'Рыба'; sub = 'У пары меньшая сумма на руках у двух игроков, поэтому она выиграла. Все очки со всех рук записываются проигравшей паре'; }
@@ -2583,8 +2584,8 @@ function netLobby(m) {
 }
 function netNames(names, humans) {
   const loc = rotSeats(names), hum = humans ? rotSeats(humans) : [true, true, true, true];
-  // bots are named by where they sit at your table
-  for (let l = 0; l < 4; l++) NAMES[l] = l === 0 ? 'Вы' : hum[l] ? loc[l] : NAMES0[l];
+  // the server names the bots too, so everyone sees the same name for the same bot
+  for (let l = 0; l < 4; l++) NAMES[l] = l === 0 ? 'Вы' : loc[l] || NAMES0[l];
   for (let l = 1; l <= 3; l++) { const el = document.querySelector('#seat' + l + ' .who span'); if (el) el.textContent = NAMES[l]; }
 }
 function netRestoreNames() {
