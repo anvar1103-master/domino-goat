@@ -10,7 +10,7 @@ const D = require('./engine.js');
 
 const PORT = process.env.PORT || 3000;
 const PAGE = path.join(__dirname, 'public', 'index.html');
-const NAMES_BOT = ['Бот Запад', 'Бот Север', 'Бот Восток', 'Бот Юг'];
+const BOT_POOL = ['Трус', 'Бывалый', 'Балбес']; // a fourth bot (rare) is just «Бот»
 const SPD = process.env.KOZEL_FAST ? 0.01 : 1; // tests only: run the clock fast
 const BOT_DELAY = 1100 * SPD; // ms between a bot's turn and its move (clients animate meanwhile)
 const NEXT_TIMEOUT = 45000; // start the next round even if someone does not press "Дальше"
@@ -53,6 +53,7 @@ function makeRoom() {
   const room = {
     code: newCode(), host: null, level: 2,
     seats: [null, null, null, null], // {pid, name, ws} for humans; null = bot
+    botNames: [null, null, null, null], // bot name per seat, fixed once given
     mode: 'normal', // 'normal' = one game, 'circle' = round-robin of 6 games
     circle: null, seatPlayer: [0, 1, 2, 3], // circle: totals per player, and which player sits in which seat
     phase: 'lobby', m: null, st: null, log: [], round: 0, carry: 0,
@@ -63,17 +64,26 @@ function makeRoom() {
 }
 const seatOf = (room, pid) => room.seats.findIndex((s) => s && s.pid === pid);
 const isBot = (room, s) => !room.seats[s] || !room.seats[s].ws; // empty or disconnected seats play as bots
+// the first bot name nobody else uses; stays with the seat
+function botName(room, s) {
+  if (!room.botNames[s]) {
+    const used = new Set(room.botNames.filter(Boolean));
+    room.botNames[s] = BOT_POOL.find((n) => !used.has(n)) || 'Бот';
+  }
+  return room.botNames[s];
+}
 const nameOf = (room, s) => {
   if (room.seats[s]) return room.seats[s].name;
   // in a circle a bot keeps the name of the player it stands in for
-  return room.circle ? room.circle.players[room.seatPlayer[s]].name : NAMES_BOT[(s + 3) % 4];
+  return room.circle ? room.circle.players[room.seatPlayer[s]].name : botName(room, s);
 };
 
 /* ---------- circle: 6 games, every pairing twice, points per player ---------- */
 function initCircle(room) {
+  room.botNames = [null, null, null, null];
   const players = [0, 1, 2, 3].map((s) => {
     const p = room.seats[s];
-    return { name: p ? p.name : NAMES_BOT[(s + 3) % 4], pid: p ? p.pid : null };
+    return { name: p ? p.name : botName(room, s), pid: p ? p.pid : null };
   });
   room.circle = { players, totals: [0, 0, 0, 0], game: 0, history: [], done: false, recorded: -1 };
   room.seatPlayer = [0, 1, 2, 3];
@@ -159,6 +169,7 @@ function sendState(room, fresh) {
 
 /* ---------- game flow ---------- */
 function startMatch(room) {
+  if (!room.circle) room.botNames = [null, null, null, null]; // names are handed out afresh, in seat order
   room.m = D.newMatch();
   room.round = 0; room.carry = 0;
   beginRound(room, null);
